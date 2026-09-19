@@ -1,8 +1,8 @@
-# Blackout Gestao
+# Blackout Jiu-Jitsu
 
-Sistema de gestão da Blackout Jiu-Jitsu, em um único arquivo `index.html`.
+Site institucional da Blackout Jiu-Jitsu / Muay Thai com cadastro publico de alunos e painel de gestao em rota separada.
 
-Versao atual: `v1.1`, pronta para publicacao estatica em Vercel e preparada para a proxima etapa com Supabase.
+Versao atual: `v1.2`, publicada como site estatico na Vercel e com cadastro publico integrado ao Supabase.
 
 ## Módulos
 
@@ -23,9 +23,12 @@ Versao atual: `v1.1`, pronta para publicacao estatica em Vercel e preparada para
 
 ## Convite e cadastro de alunos
 
-- `cadastro.html`: página pública de cadastro, sem nenhum dado da academia.
+- `index.html`: site publico da academia.
+- `sistema.html`: painel de gestao da academia.
+- `cadastro.html`: página pública de cadastro, sem nenhum dado sensivel da academia.
 - `academia.json`: código de convite, nome, WhatsApp e modalidades. A página de cadastro usa este arquivo para conferir o código.
-- `vercel.json`: cria o endereço curto `/join?codigo=XXXXXX`.
+- `join.html`: redireciona `/join?codigo=XXXXXX` para o cadastro.
+- `vercel.json`: cria rotas curtas como `/join`, `/sistema`, `/gestao` e `/app`.
 - `PRODUCTION_CHECKLIST.md`: checklist antes de publicar.
 - `supabase/schema.sql`: schema inicial, seed da academia e funcao de cadastro publico.
 - `supabase/config.js`: URL e chave publicavel do Supabase usadas pelo cadastro publico.
@@ -38,8 +41,8 @@ Sempre que mudar o código, o WhatsApp ou as modalidades, baixe um novo `academi
 
 1. Publique o conteudo desta pasta `v1` em um repositorio GitHub.
 2. Na Vercel, importe o repositorio como projeto estatico.
-3. Use `/` para o painel e `/join?codigo=BLKOUT` para o cadastro publico.
-4. Depois do deploy, preencha em Configuracoes o endereco final da Vercel.
+3. Use `/` para o site publico, `/sistema` para o painel e `/join?codigo=BLKOUT` para o cadastro publico.
+4. Depois do deploy, preencha em Configuracoes do painel o endereco final da Vercel.
 5. Atualize `academia.json` com o WhatsApp real da academia antes de convidar alunos.
 
 ## Supabase
@@ -54,7 +57,7 @@ O arquivo `supabase/schema.sql` deve ser rodado no SQL Editor do Supabase. Ele c
 
 Depois de rodar o SQL e publicar o site, novos cadastros publicos entram direto na tabela `alunos` com `novo = true`.
 
-O painel principal ainda usa `localStorage`. A proxima etapa tecnica e trocar a camada de dados do `index.html` por Supabase Auth e banco para dono, professores e recepcao acessarem os mesmos dados.
+O painel principal ainda usa `localStorage`. A proxima etapa tecnica e trocar a camada de dados do `sistema.html` por Supabase Auth e banco para dono, professores e recepcao acessarem os mesmos dados.
 
 ## Importante
 

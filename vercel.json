@@ -2,8 +2,16 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/gestao",
+      "destination": "/sistema.html"
+    },
+    {
+      "source": "/app",
+      "destination": "/sistema.html"
+    },
+    {
       "source": "/join",
-      "destination": "/cadastro.html"
+      "destination": "/join.html"
     }
   ]
 }
