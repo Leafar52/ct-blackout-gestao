@@ -13,6 +13,9 @@ create table if not exists public.academias (
   created_at timestamptz not null default now()
 );
 
+create unique index if not exists idx_academias_codigo_convite_upper
+  on public.academias (upper(codigo_convite));
+
 create table if not exists public.usuarios (
   id uuid primary key references auth.users(id) on delete cascade,
   academia_id uuid not null references public.academias(id) on delete cascade,
@@ -228,11 +231,151 @@ as $$
 $$;
 
 -- Politicas base. Ajuste permissoes finas por papel na etapa de integracao.
+drop policy if exists "usuarios veem a propria academia" on public.usuarios;
 create policy "usuarios veem a propria academia" on public.usuarios
   for select using (id = auth.uid() or academia_id = public.usuario_academia_id());
 
+drop policy if exists "academia por membro" on public.academias;
 create policy "academia por membro" on public.academias
   for select using (id = public.usuario_academia_id());
+
+create or replace function public.receber_cadastro_publico(p_codigo text, p_cadastro jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_academia public.academias%rowtype;
+  v_aluno_id uuid;
+  v_modalidade text;
+  v_modalidade_id uuid;
+  v_nascimento date;
+  v_lgpd date;
+  v_resp jsonb;
+begin
+  select *
+    into v_academia
+    from public.academias
+   where upper(codigo_convite) = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g'))
+   limit 1;
+
+  if v_academia.id is null then
+    raise exception 'codigo_convite_invalido' using errcode = '22023';
+  end if;
+
+  if nullif(trim(coalesce(p_cadastro->>'nome', '')), '') is null then
+    raise exception 'nome_obrigatorio' using errcode = '22023';
+  end if;
+
+  if nullif(trim(coalesce(p_cadastro->>'email', '')), '') is null then
+    raise exception 'email_obrigatorio' using errcode = '22023';
+  end if;
+
+  if coalesce(p_cadastro->>'nascimento', '') ~ '^\d{4}-\d{2}-\d{2}$' then
+    v_nascimento := (p_cadastro->>'nascimento')::date;
+  end if;
+
+  if coalesce(p_cadastro->>'lgpd', '') ~ '^\d{4}-\d{2}-\d{2}$' then
+    v_lgpd := (p_cadastro->>'lgpd')::date;
+  else
+    v_lgpd := current_date;
+  end if;
+
+  insert into public.alunos (
+    academia_id,
+    nome,
+    nascimento,
+    telefone,
+    email,
+    status,
+    faixa,
+    novo,
+    lgpd_aceite
+  ) values (
+    v_academia.id,
+    trim(p_cadastro->>'nome'),
+    v_nascimento,
+    nullif(trim(coalesce(p_cadastro->>'telefone', '')), ''),
+    lower(nullif(trim(coalesce(p_cadastro->>'email', '')), '')),
+    'ativo',
+    coalesce(nullif(trim(p_cadastro->>'faixa'), ''), 'branca'),
+    true,
+    v_lgpd
+  )
+  returning id into v_aluno_id;
+
+  for v_modalidade in
+    select value from jsonb_array_elements_text(coalesce(p_cadastro->'modalidades', '[]'::jsonb))
+  loop
+    select id
+      into v_modalidade_id
+      from public.modalidades
+     where academia_id = v_academia.id
+       and lower(nome) = lower(v_modalidade)
+     limit 1;
+
+    if v_modalidade_id is null then
+      insert into public.modalidades (academia_id, nome, sistema, cor)
+      values (
+        v_academia.id,
+        v_modalidade,
+        case when v_modalidade ilike '%jiu%' or v_modalidade ilike '%no-gi%' then 'bjj' else 'nenhum' end,
+        '#8C8C8C'
+      )
+      returning id into v_modalidade_id;
+    end if;
+
+    insert into public.aluno_modalidades (aluno_id, modalidade_id, nivel)
+    values (v_aluno_id, v_modalidade_id, p_cadastro->>'faixa')
+    on conflict do nothing;
+  end loop;
+
+  v_resp := p_cadastro->'resp';
+  if v_resp is not null and jsonb_typeof(v_resp) = 'object' and nullif(trim(coalesce(v_resp->>'nome', '')), '') is not null then
+    insert into public.responsaveis (aluno_id, nome, parentesco, telefone)
+    values (
+      v_aluno_id,
+      trim(v_resp->>'nome'),
+      nullif(trim(coalesce(v_resp->>'parentesco', '')), ''),
+      nullif(trim(coalesce(v_resp->>'telefone', '')), '')
+    );
+  end if;
+
+  return jsonb_build_object('ok', true, 'aluno_id', v_aluno_id);
+end;
+$$;
+
+grant execute on function public.receber_cadastro_publico(text, jsonb) to anon, authenticated;
+
+insert into public.academias (id, nome, codigo_convite, whatsapp)
+select '00000000-0000-0000-0000-000000000001', 'Blackout Jiu-Jitsu', 'BLKOUT', '5511961167426'
+where not exists (
+  select 1 from public.academias where upper(codigo_convite) = 'BLKOUT'
+);
+
+update public.academias
+   set nome = 'Blackout Jiu-Jitsu',
+       whatsapp = '5511961167426'
+ where upper(codigo_convite) = 'BLKOUT';
+
+insert into public.modalidades (academia_id, nome, sistema, cor)
+select a.id, m.nome, m.sistema, m.cor
+from public.academias a
+cross join (
+  values
+    ('Jiu-Jitsu', 'bjj', '#FFFFFF'),
+    ('No-Gi', 'bjj', '#E3161B'),
+    ('Muay Thai', 'nenhum', '#8C8C8C'),
+    ('Funcional', 'nenhum', '#FFD166')
+) as m(nome, sistema, cor)
+where upper(a.codigo_convite) = 'BLKOUT'
+  and not exists (
+    select 1
+      from public.modalidades x
+     where x.academia_id = a.id
+       and lower(x.nome) = lower(m.nome)
+  );
 
 -- As demais tabelas devem receber politicas por academia na integracao do cliente,
 -- depois de confirmar o modelo de permissoes do dono/professor/recepcao.

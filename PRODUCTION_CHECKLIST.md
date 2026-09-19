@@ -24,9 +24,13 @@ Use este checklist antes de colocar a Blackout Gestao em uso real.
 ## Supabase
 
 - Criar um projeto Supabase.
-- Rodar `supabase/schema.sql` no SQL Editor.
-- Ativar Auth antes de migrar dados reais.
-- Implementar a camada de dados remota antes de usar em varios aparelhos ao mesmo tempo.
+- Conferir se `supabase/config.js` tem a URL e a publishable key corretas.
+- Abrir Supabase > SQL Editor > New query.
+- Copiar todo o conteudo de `supabase/schema.sql`, colar e rodar.
+- Testar `/join?codigo=BLKOUT` com um cadastro ficticio.
+- Verificar se o aluno apareceu em Table Editor > `alunos` com `novo = true`.
+- Ativar Auth antes de migrar o painel principal para varios usuarios.
+- Implementar a camada de dados remota do `index.html` antes de usar em varios aparelhos ao mesmo tempo.
 
 ## Aviso operacional
 

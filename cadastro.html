@@ -80,7 +80,7 @@ h1 span{color:var(--gray)}
   <section id="form-view" hidden>
     <p class="invite" id="invite" hidden>Convite <b id="inviteCode"></b></p>
     <h1>Faça parte <span id="acadNome">da Blackout.</span></h1>
-    <p class="lead">Preencha seus dados. No final, o cadastro é enviado para a academia pelo WhatsApp.</p>
+    <p class="lead">Preencha seus dados. No final, o cadastro é enviado para a academia e também fica pronto para confirmar pelo WhatsApp.</p>
     <div class="warn" id="semNumero" hidden>Este link está sem o número da academia. Peça o link de cadastro atualizado na recepção.</div>
 
     <form id="f" novalidate>
@@ -137,12 +137,14 @@ h1 span{color:var(--gray)}
 </main>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase/config.js"></script>
 <script>
 (function(){
   "use strict";
   var P = new URLSearchParams(location.search);
   var $ = function(id){ return document.getElementById(id); };
-  var WA = "", ACAD = "Blackout Jiu-Jitsu", MODS = ["Jiu-Jitsu","No-Gi","Muay Thai","Funcional"], CODIGO = "", CFG = null;
+  var WA = "", ACAD = "Blackout Jiu-Jitsu", MODS = ["Jiu-Jitsu","No-Gi","Muay Thai","Funcional"], CODIGO = "", CFG = null, SB = null;
   function norm(c){ return String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
   function mostrar(v){ $("loading").hidden = true; ["code-view","form-view","done-view"].forEach(function(id){ $(id).hidden = id !== v; }); window.scrollTo(0, 0); }
   function aplicar(cfg, codigo){
@@ -185,6 +187,19 @@ h1 span{color:var(--gray)}
   $("nascimento").addEventListener("change", function(){ var i = idade(this.value); $("respCard").hidden = !(i != null && i < 18); });
 
   function toast(m){ var t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(function(){ t.classList.remove("show"); }, 2400); }
+  function supabaseClient(){
+    var cfg = window.BLACKOUT_SUPABASE || {};
+    if (!cfg.url || !cfg.publishableKey || !window.supabase) return null;
+    if (!SB) SB = window.supabase.createClient(cfg.url, cfg.publishableKey);
+    return SB;
+  }
+  async function salvarNoSupabase(payload){
+    var client = supabaseClient();
+    if (!client) return null;
+    var res = await client.rpc("receber_cadastro_publico", {p_codigo: CODIGO || (CFG && CFG.codigo) || "", p_cadastro: payload});
+    if (res.error) throw res.error;
+    return res.data;
+  }
   function erro(el, msg){
     el.setAttribute("aria-invalid", "true");
     var p = el.parentNode.querySelector(".err"); if (!p){ p = document.createElement("p"); p.className = "err"; el.parentNode.appendChild(p); }
@@ -226,6 +241,12 @@ h1 span{color:var(--gray)}
     $("doneNome").textContent = dados.nome.split(/\s+/)[0] + ".";
     mostrar("done-view");
     abrir();
+    salvarNoSupabase(dados).then(function(){
+      toast("Cadastro registrado no sistema");
+    }).catch(function(err){
+      console.warn("Supabase cadastro", err);
+      toast("WhatsApp aberto. Banco ainda não recebeu o cadastro");
+    });
   });
   function abrir(){
     if (!/^\d{12,13}$/.test(WA)) { toast("Link sem número da academia. Copie o cadastro."); return; }

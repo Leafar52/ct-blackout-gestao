@@ -27,9 +27,10 @@ Versao atual: `v1.1`, pronta para publicacao estatica em Vercel e preparada para
 - `academia.json`: código de convite, nome, WhatsApp e modalidades. A página de cadastro usa este arquivo para conferir o código.
 - `vercel.json`: cria o endereço curto `/join?codigo=XXXXXX`.
 - `PRODUCTION_CHECKLIST.md`: checklist antes de publicar.
-- `supabase/schema.sql`: schema inicial para a futura persistencia online.
+- `supabase/schema.sql`: schema inicial, seed da academia e funcao de cadastro publico.
+- `supabase/config.js`: URL e chave publicavel do Supabase usadas pelo cadastro publico.
 
-O aluno abre `seusite.vercel.app/join?codigo=BLKOUT` (ou digita o código), preenche os dados e envia o cadastro para a academia pelo WhatsApp. No sistema, use Alunos > Importar cadastro.
+O aluno abre `seusite.vercel.app/join?codigo=BLKOUT` (ou digita o código), preenche os dados e o cadastro e gravado no Supabase. O WhatsApp continua abrindo como confirmacao e plano B.
 
 Sempre que mudar o código, o WhatsApp ou as modalidades, baixe um novo `academia.json` em Alunos > Convite e substitua no repositório.
 
@@ -41,18 +42,20 @@ Sempre que mudar o código, o WhatsApp ou as modalidades, baixe um novo `academi
 4. Depois do deploy, preencha em Configuracoes o endereco final da Vercel.
 5. Atualize `academia.json` com o WhatsApp real da academia antes de convidar alunos.
 
-## Proxima etapa: Supabase
+## Supabase
 
-O arquivo `supabase/schema.sql` cria a base inicial para:
+O arquivo `supabase/schema.sql` deve ser rodado no SQL Editor do Supabase. Ele cria a base inicial para:
 
 - usuarios por papel: dono, professor e recepcao;
 - alunos, responsaveis, anamnese e modalidades;
 - aulas, presencas, graduacoes e eventos;
 - mensalidades, pagamentos, despesas e mensagens.
+- funcao `receber_cadastro_publico`, chamada pela pagina `cadastro.html`.
 
-A integracao ainda precisa trocar a camada atual de `localStorage` por chamadas ao Supabase Auth e banco. Ate isso ser feito, o sistema continua funcionando por navegador/aparelho.
+Depois de rodar o SQL e publicar o site, novos cadastros publicos entram direto na tabela `alunos` com `novo = true`.
+
+O painel principal ainda usa `localStorage`. A proxima etapa tecnica e trocar a camada de dados do `index.html` por Supabase Auth e banco para dono, professores e recepcao acessarem os mesmos dados.
 
 ## Importante
 
-Os dados ficam salvos no navegador de cada aparelho. Use Configurações > Exportar backup com frequência.
-Para vários aparelhos acessarem os mesmos dados, é preciso ligar o sistema a um banco de dados online.
+Enquanto o painel principal estiver em `localStorage`, dados editados dentro do painel ficam no navegador de cada aparelho. Use Configurações > Exportar backup com frequência ate a migracao completa.
