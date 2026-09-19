@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cadastro | Blackout Jiu-Jitsu</title>
+  <meta name="robots" content="noindex" />
+  <script>
+    const target = "/cadastro" + window.location.search + window.location.hash;
+    window.location.replace(target);
+  </script>
+</head>
+<body>
+  <p>Redirecionando para o cadastro...</p>
+  <p><a id="cadastro-link" href="/cadastro">Abrir cadastro</a></p>
+  <script>
+    document.getElementById("cadastro-link").href = target;
+  </script>
+</body>
+</html>
